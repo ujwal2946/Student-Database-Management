@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Attendance Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Attendance Management</h1>
+            <nav>
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('students') }}">Students</a>
+                <a href="{{ url_for('grades') }}">Grades</a>
+                <a href="{{ url_for('logout') }}">Logout</a>
+            </nav>
+        </header>
+
+        <!-- Search and Actions Section -->
+        <div class="page-header">
+            <div class="action-buttons">
+                <button type="button" id="markAttendanceBtn" class="action-btn add-btn">
+                    <span class="btn-icon">📝</span>
+                    Mark Attendance
+                </button>
+            </div>
+        </div>
+
+        <h3>📅 Attendance Records</h3>
+
+        <!-- Search Bar Integrated with Table -->
+        <div class="table-search-container">
+            <div class="table-search-bar">
+                <form method="GET" id="searchForm" class="inline-search">
+                    <div class="search-input-group">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchQuery" name="q" placeholder="Search by student name or date..." value="{{ request.args.get('q', '') }}" autocomplete="off">
+                        <button type="submit" class="search-btn">Search</button>
+                        {% if request.args.get('q') %}
+                        <button type="button" onclick="clearSearch()" class="clear-search-btn" title="Clear search">
+                            <span class="clear-icon">🗑️</span>
+                            <span class="clear-text">Clear</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>👨‍🎓 Student Name</th>
+                        <th>📅 Date</th>
+                        <th>📊 Status</th>
+                        <th>⚡ Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance %}
+                    <tr>
+                        <td>{{ record[0] }}</td>
+                        <td>{{ record[1] }}</td>
+                        <td>{{ record[2] }}</td>
+                        <td>
+                            <span class="status-badge status-{{ record[3] }}">
+                                {% if record[3] == 'present' %}✅ Present{% else %}❌ Absent{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="table-actions">
+                                <button type="button" class="action-btn edit-btn" onclick="editAttendance({{ record[0] }}, '{{ record[1] }}', '{{ record[2] }}', '{{ record[3] }}')" title="Edit Attendance">
+                                    <span class="btn-icon">✏️</span>
+                                </button>
+                                <button type="button" class="action-btn delete-btn" onclick="deleteAttendance({{ record[0] }}, '{{ record[1] }}')" title="Delete Record">
+                                    <span class="btn-icon">🗑️</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mark Attendance Modal -->
+        <div id="markAttendanceModal" class="modal">
+            <div class="modal-content large-modal">
+                <div class="modal-header">
+                    <h3>📝 Mark Attendance</h3>
+                    <span class="modal-close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="markAttendanceForm">
+                        <input type="hidden" name="mark" value="1">
+                        <div class="form-group">
+                            <label for="date">📅 Select Date:</label>
+                            <input type="date" id="date" name="date" required>
+                        </div>
+                        <div class="attendance-list-container">
+                            <div class="attendance-header">
+                                <h4>👨‍🎓 Students</h4>
+                            </div>
+                            <div class="students-attendance-list">
+                                {% for student in students %}
+                                <div class="attendance-item">
+                                    <div class="student-name">
+                                        <span>{{ student[1] }}</span>
+                                    </div>
+                                    <div class="attendance-checkboxes">
+                                        <label class="checkbox-label present-label">
+                                            <input type="radio" name="student_status_{{ student[0] }}" value="present_{{ student[0] }}" class="attendance-checkbox">
+                                            <span class="checkbox-text">✅ Present</span>
+                                        </label>
+                                        <label class="checkbox-label absent-label">
+                                            <input type="radio" name="student_status_{{ student[0] }}" value="absent_{{ student[0] }}" class="attendance-checkbox">
+                                            <span class="checkbox-text">❌ Absent</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="action-btn cancel-btn" onclick="closeModal()">
+                                <span class="btn-icon">❌</span>
+                                Cancel
+                            </button>
+                            <button type="submit" class="action-btn save-btn">
+                                <span class="btn-icon">💾</span>
+                                Mark Attendance
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Attendance Modal -->
+        <div id="editAttendanceModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>✏️ Edit Attendance</h3>
+                    <span class="modal-close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="editAttendanceForm">
+                        <input type="hidden" name="update" value="1">
+                        <input type="hidden" name="id" id="editAttendanceId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editStudentName">👨‍🎓 Student:</label>
+                                <input type="text" id="editStudentName" readonly class="readonly-field">
+                            </div>
+                            <div class="form-group">
+                                <label for="editDate">📅 Date:</label>
+                                <input type="date" id="editDate" name="date" required readonly class="readonly-field">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="editStatus">📊 Status:</label>
+                            <select id="editStatus" name="status" required>
+                                <option value="present">✅ Present</option>
+                                <option value="absent">❌ Absent</option>
+                            </select>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="action-btn cancel-btn" onclick="closeModal()">
+                                <span class="btn-icon">❌</span>
+                                Cancel
+                            </button>
+                            <button type="submit" class="action-btn save-btn">
+                                <span class="btn-icon">💾</span>
+                                Update Attendance
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content small-modal">
+                <div class="modal-header">
+                    <h3>🗑️ Delete Attendance Record</h3>
+                    <span class="modal-close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the attendance record for <strong id="deleteStudentName"></strong>?</p>
+                    <form method="POST" id="deleteForm">
+                        <input type="hidden" name="delete" value="1">
+                        <input type="hidden" name="id" id="deleteId">
+                        <div class="modal-actions">
+                            <button type="button" class="action-btn cancel-btn" onclick="closeModal()">
+                                <span class="btn-icon">❌</span>
+                                Cancel
+                            </button>
+                            <button type="submit" class="action-btn delete-confirm-btn">
+                                <span class="btn-icon">🗑️</span>
+                                Delete
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functionality
+        const markModal = document.getElementById('markAttendanceModal');
+        const editModal = document.getElementById('editAttendanceModal');
+        const deleteModal = document.getElementById('deleteModal');
+        const markBtn = document.getElementById('markAttendanceBtn');
+
+        // Open mark attendance modal
+        markBtn.addEventListener('click', function() {
+            markModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            // Auto-fill today's date
+            document.getElementById('date').valueAsDate = new Date();
+        });
+
+        // Close modals when clicking X or outside
+        document.querySelectorAll('.modal-close').forEach(closeBtn => {
+            closeBtn.addEventListener('click', closeModal);
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target === markModal || event.target === editModal || event.target === deleteModal) {
+                closeModal();
+            }
+        });
+
+        function closeModal() {
+            markModal.style.display = 'none';
+            editModal.style.display = 'none';
+            deleteModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Edit attendance function
+        function editAttendance(id, studentName, date, status) {
+            document.getElementById('editAttendanceId').value = id;
+            document.getElementById('editStudentName').value = studentName;
+            document.getElementById('editDate').value = date;
+            document.getElementById('editStatus').value = status;
+            editModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Delete attendance function
+        function deleteAttendance(id, studentName) {
+            document.getElementById('deleteId').value = id;
+            document.getElementById('deleteStudentName').textContent = studentName;
+            deleteModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Clear search function
+        function clearSearch() {
+            const searchInput = document.getElementById('searchQuery');
+            searchInput.value = '';
+            // Redirect to clear the search
+            window.location.href = '{{ url_for("attendance") }}';
+        }
+
+        // Handle Mark Attendance form submission
+        document.getElementById('markAttendanceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const date = document.getElementById('date').value;
+            if (!date) {
+                alert('Please select a date');
+                return;
+            }
+
+            // Collect all checked students
+            const formData = new FormData();
+            formData.append('mark', '1');
+            formData.append('date', date);
+
+            let hasSelection = false;
+            const checkboxes = document.querySelectorAll('input[type="radio"]:checked');
+            
+            checkboxes.forEach(checkbox => {
+                const value = checkbox.value;
+                const [status, studentId] = value.split('_');
+                
+                // Create a hidden form and submit for each student
+                hasSelection = true;
+            });
+
+            if (!hasSelection) {
+                alert('Please mark attendance for at least one student');
+                return;
+            }
+
+            // Submit attendance for all checked students
+            checkboxes.forEach(checkbox => {
+                const value = checkbox.value;
+                const [status, studentId] = value.split('_');
+                
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.style.display = 'none';
+                
+                const markInput = document.createElement('input');
+                markInput.type = 'hidden';
+                markInput.name = 'mark';
+                markInput.value = '1';
+                form.appendChild(markInput);
+                
+                const studentIdInput = document.createElement('input');
+                studentIdInput.type = 'hidden';
+                studentIdInput.name = 'student_id';
+                studentIdInput.value = studentId;
+                form.appendChild(studentIdInput);
+                
+                const dateInput = document.createElement('input');
+                dateInput.type = 'hidden';
+                dateInput.name = 'date';
+                dateInput.value = date;
+                form.appendChild(dateInput);
+                
+                const statusInput = document.createElement('input');
+                statusInput.type = 'hidden';
+                statusInput.name = 'status';
+                statusInput.value = status;
+                form.appendChild(statusInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+                document.body.removeChild(form);
+            });
+
+            closeModal();
+        });
+
+        // Form submission feedback for edit and delete forms
+        document.getElementById('editAttendanceForm').addEventListener('submit', function(e) {
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="btn-icon">⏳</span> Processing...';
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 3000);
+            }
+        });
+
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="btn-icon">⏳</span> Processing...';
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>

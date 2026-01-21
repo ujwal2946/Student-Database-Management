@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Dashboard</h1>
+            <nav>
+                {% if session.get('role') == 'admin' %}
+                    <a href="{{ url_for('students') }}">Students</a>
+                    <a href="{{ url_for('attendance') }}">Attendance</a>
+                    <a href="{{ url_for('grades') }}">Grades</a>
+                {% elif session.get('role') == 'attendance' %}
+                    <a href="{{ url_for('attendance') }}">Attendance</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}">Logout</a>
+            </nav>
+        </header>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Students</h3>
+                <p class="stat-number">{{ total_students }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Present Today</h3>
+                <p class="stat-number">{{ present_today }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Absent Today</h3>
+                <p class="stat-number">{{ absent_today }}</p>
+            </div>
+            {% if session.get('role') == 'admin' %}
+            <div class="stat-card">
+                <h3>Average Grade</h3>
+                <p class="stat-number">{{ "%.1f"|format(avg_grade) if avg_grade else "N/A" }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+        // Simple fade in
+        document.querySelector('.container').style.opacity = '0';
+        setTimeout(() => {
+            document.querySelector('.container').style.transition = 'opacity 0.5s';
+            document.querySelector('.container').style.opacity = '1';
+        }, 100);
+
+        // Animate stat numbers
+        document.querySelectorAll('.stat-number').forEach(el => {
+            const target = parseFloat(el.textContent) || 0;
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                el.textContent = isNaN(target) ? el.textContent : Math.round(current);
+            }, 20);
+        });
+    </script>

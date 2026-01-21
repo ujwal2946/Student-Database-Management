@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h2>Student Details</h2>
+        <nav>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('attendance') }}">Attendance</a>
+            <a href="{{ url_for('grades') }}">Grades</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </nav>
+
+        <!-- Search and Actions Section -->
+        <div class="page-header">
+            <div class="action-buttons">
+                <button type="button" id="addStudentBtn" class="action-btn add-btn">
+                    <span class="btn-icon">➕</span>
+                    Add New Student
+                </button>
+            </div>
+        </div>
+
+        <h3>📚 Students List</h3>
+
+        <!-- Search Bar Integrated with Table -->
+        <div class="table-search-container">
+            <div class="table-search-bar">
+                <form method="GET" id="searchForm" class="inline-search">
+                    <div class="search-input-group">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchQuery" name="q" placeholder="Search by name, ID, class, email, or phone..." value="{{ request.args.get('q', '') }}" autocomplete="off">
+                        <button type="submit" class="search-btn">Search</button>
+                        {% if request.args.get('q') %}
+                        <button type="button" onclick="clearSearch()" class="clear-search-btn" title="Clear search">
+                            <span class="clear-icon">🗑️</span>
+                            <span class="clear-text">Clear</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Class</th>
+                        <th>Gender</th>
+                        <th>DOB</th>
+                        <th>Parent Email</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ student[0] }}</td>
+                        <td>{{ student[1] }}</td>
+                        <td>{{ student[6] or 'Not Set' }}</td>
+                        <td>{{ student[10] or 'Not Set' }}</td>
+                        <td>{{ student[2] }}</td>
+                        <td>{{ student[3] }}</td>
+                        <td>{{ student[4] or 'Not Set' }}</td>
+                        <td>
+                            <div class="table-actions">
+                                <button type="button" class="action-btn edit-btn" onclick="editStudent({{ student[0] }}, '{{ student[1] }}', '{{ student[2] }}', '{{ student[3] }}', '{{ student[4] or '' }}', '{{ student[5] or '' }}', '{{ student[6] or '' }}', '{{ student[7] or '' }}', '{{ student[8] or '' }}', '{{ student[9] or '' }}', '{{ student[10] or '' }}', '{{ student[11] or '' }}')" title="Edit Student">
+                                    <span class="btn-icon">✏️</span>
+                                </button>
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="delete" value="1">
+                                    <input type="hidden" name="id" value="{{ student[0] }}">
+                                    <button type="submit" class="action-btn delete-btn" onclick="return confirm('Are you sure you want to delete this student?')" title="Delete Student">
+                                        <span class="btn-icon">🗑️</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="addStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>👨‍🎓 Add New Student</h3>
+                <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="addStudentForm">
+                    <input type="hidden" name="add" value="1">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">👤 Student Name:</label>
+                            <input type="text" id="name" name="name" required placeholder="Enter student name">
+                        </div>
+                        <div class="form-group">
+                            <label for="grade_class">🏫 Grade/Class:</label>
+                            <input type="text" id="grade_class" name="grade_class" placeholder="e.g., 10th Grade, Class A">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="gender">⚧️ Gender:</label>
+                            <select id="gender" name="gender">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dob">📅 Date of Birth:</label>
+                            <input type="date" id="dob" name="dob" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="phone">📱 Phone Number:</label>
+                            <input type="tel" id="phone" name="phone" placeholder="Enter phone number">
+                        </div>
+                        <div class="form-group">
+                            <label for="parent_email">📧 Parent Email:</label>
+                            <input type="email" id="parent_email" name="parent_email" required placeholder="Enter parent email">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="address">🏠 Address:</label>
+                        <textarea id="address" name="address" rows="3" placeholder="Enter complete address"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="enrollment_date">📅 Enrollment Date:</label>
+                            <input type="date" id="enrollment_date" name="enrollment_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="emergency_contact_name">🚨 Emergency Contact Name:</label>
+                            <input type="text" id="emergency_contact_name" name="emergency_contact_name" placeholder="Enter emergency contact name">
+                        </div>
+                    </div>
+                        <div class="form-group">
+                            <label for="emergency_contact_phone">📞 Emergency Contact Phone:</label>
+                            <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" placeholder="Enter emergency contact phone">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="medical_info">🏥 Medical Information:</label>
+                        <textarea id="medical_info" name="medical_info" rows="2" placeholder="Any medical conditions, allergies, or special needs"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="action-btn cancel-btn" onclick="closeModal()">
+                            <span class="btn-icon">❌</span>
+                            Cancel
+                        </button>
+                        <button type="submit" class="action-btn save-btn">
+                            <span class="btn-icon">💾</span>
+                            Add Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Edit Student</h3>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="editStudentForm">
+                    <input type="hidden" name="update" value="1">
+                    <input type="hidden" name="id" id="editStudentId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editName">👤 Student Name:</label>
+                            <input type="text" id="editName" name="name" required placeholder="Enter student name">
+                        </div>
+                        <div class="form-group">
+                            <label for="editGradeClass">🏫 Grade/Class:</label>
+                            <input type="text" id="editGradeClass" name="grade_class" placeholder="e.g., 10th Grade, Class A">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editGender">⚧️ Gender:</label>
+                            <select id="editGender" name="gender">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editDob">📅 Date of Birth:</label>
+                            <input type="date" id="editDob" name="dob" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editPhone">📱 Phone Number:</label>
+                            <input type="tel" id="editPhone" name="phone" placeholder="Enter phone number">
+                        </div>
+                        <div class="form-group">
+                            <label for="editParentEmail">📧 Parent Email:</label>
+                            <input type="email" id="editParentEmail" name="parent_email" required placeholder="Enter parent email">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAddress">🏠 Address:</label>
+                        <textarea id="editAddress" name="address" rows="3" placeholder="Enter complete address"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editEnrollmentDate">📅 Enrollment Date:</label>
+                            <input type="date" id="editEnrollmentDate" name="enrollment_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editEmergencyContactName">🚨 Emergency Contact Name:</label>
+                            <input type="text" id="editEmergencyContactName" name="emergency_contact_name" placeholder="Enter emergency contact name">
+                        </div>
+                    </div>
+                        <div class="form-group">
+                            <label for="editEmergencyContactPhone">📞 Emergency Contact Phone:</label>
+                            <input type="tel" id="editEmergencyContactPhone" name="emergency_contact_phone" placeholder="Enter emergency contact phone">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editMedicalInfo">🏥 Medical Information:</label>
+                        <textarea id="editMedicalInfo" name="medical_info" rows="2" placeholder="Any medical conditions, allergies, or special needs"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="action-btn cancel-btn" onclick="closeModal()">
+                            <span class="btn-icon">❌</span>
+                            Cancel
+                        </button>
+                        <button type="submit" class="action-btn save-btn">
+                            <span class="btn-icon">💾</span>
+                            Update Student
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Modal functionality
+        const addModal = document.getElementById('addStudentModal');
+        const editModal = document.getElementById('editStudentModal');
+        const addBtn = document.getElementById('addStudentBtn');
+
+        // Open add student modal
+        addBtn.addEventListener('click', function() {
+            addModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        });
+
+        // Close modals when clicking X or outside
+        document.querySelectorAll('.modal-close').forEach(closeBtn => {
+            closeBtn.addEventListener('click', closeModal);
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target === addModal || event.target === editModal) {
+                closeModal();
+            }
+        });
+
+        function closeModal() {
+            addModal.style.display = 'none';
+            editModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Edit student function
+        function editStudent(id, name, dob, email, phone, address, gradeClass, enrollmentDate, emergencyName, emergencyPhone, medicalInfo, gender) {
+            document.getElementById('editStudentId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editDob').value = dob;
+            document.getElementById('editParentEmail').value = email;
+            document.getElementById('editPhone').value = phone || '';
+            document.getElementById('editAddress').value = address || '';
+            document.getElementById('editGradeClass').value = gradeClass || '';
+            document.getElementById('editEnrollmentDate').value = enrollmentDate || '';
+            document.getElementById('editEmergencyContactName').value = emergencyName || '';
+            document.getElementById('editEmergencyContactPhone').value = emergencyPhone || '';
+            document.getElementById('editMedicalInfo').value = medicalInfo || '';
+            document.getElementById('editGender').value = gender || '';
+
+            editModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Form submission feedback
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="btn-icon">⏳</span> Processing...';
+                    btn.disabled = true;
+
+                    // Re-enable after 3 seconds if no redirect
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }, 3000);
+                }
+            });
+        });
+
+        // Clear search function
+        function clearSearch() {
+            const searchInput = document.getElementById('searchQuery');
+            searchInput.value = '';
+            // Redirect to clear the search
+            window.location.href = '{{ url_for("students") }}';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👨‍🎓 Student Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👨‍🎓 Student Dashboard</h1>
+            <nav>
+                <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+            </nav>
+        </header>
+
+        <div class="page-header">
+            <h2>Welcome, {{ student_info[1] }}! 👋</h2>
+        </div>
+
+        <!-- Student Information Section -->
+        <div class="dashboard-grid">
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3>📋 Personal Information</h3>
+                </div>
+                <div class="card-content">
+                    <div class="info-row">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value">{{ student_info[1] }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Date of Birth:</span>
+                        <span class="info-value">{{ student_info[2] }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Class:</span>
+                        <span class="info-value">{{ student_info[6] or 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Gender:</span>
+                        <span class="info-value">{{ student_info[12] or 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Enrollment Date:</span>
+                        <span class="info-value">{{ student_info[7] }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Address:</span>
+                        <span class="info-value">{{ student_info[5] or 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Phone:</span>
+                        <span class="info-value">{{ student_info[4] or 'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Overview Card -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3>📊 Attendance Overview</h3>
+                </div>
+                <div class="card-content attendance-overview">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ "%.1f"|format(attendance_percentage) }}%</div>
+                        <div class="stat-label">Attendance Rate</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ attendance_percentage }}%; background: {% if attendance_percentage >= 80 %}#38a169{% elif attendance_percentage >= 70 %}#f6ad55{% else %}#e53e3e{% endif %};"></div>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ attendance_records|length }}</div>
+                        <div class="stat-label">Total Records</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grades Overview Card -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h3>📈 Academic Performance</h3>
+                </div>
+                <div class="card-content grades-overview">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ "%.2f"|format(average_grade) }}</div>
+                        <div class="stat-label">Average Grade</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ grades_records|length }}</div>
+                        <div class="stat-label">Subjects</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Records -->
+        <div class="records-section">
+            <h3>📅 Attendance Records</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>📅 Date</th>
+                            <th>📊 Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if attendance_records %}
+                            {% for record in attendance_records %}
+                            <tr>
+                                <td>{{ record[0] }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ record[1] }}">
+                                        {% if record[1] == 'present' %}✅ Present{% else %}❌ Absent{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="2" class="no-data">No attendance records found</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Grades Records -->
+        <div class="records-section">
+            <h3>📚 Grades</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>📚 Subject</th>
+                            <th>📊 Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if grades_records %}
+                            {% for grade in grades_records %}
+                            <tr>
+                                <td>{{ grade[0] }}</td>
+                                <td>
+                                    <span class="grade-score">{{ "%.2f"|format(grade[1]) }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="2" class="no-data">No grades recorded yet</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .dashboard-card:hover {
+            border-color: #cbd5e0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+
+        .card-header h3 {
+            margin: 0;
+            font-size: 1.1em;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #4a5568;
+            min-width: 120px;
+        }
+
+        .info-value {
+            color: #2d3748;
+            text-align: right;
+        }
+
+        .attendance-overview,
+        .grades-overview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .records-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            margin-bottom: 30px;
+        }
+
+        .records-section h3 {
+            color: #2d3748;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #a0aec0;
+            padding: 20px;
+        }
+
+        .logout-link {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .logout-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+        }
+
+        header nav {
+            text-align: right;
+        }
+    </style>
+</body>
+</html>

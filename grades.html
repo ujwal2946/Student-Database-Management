@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Grades Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Grades Management</h1>
+            <nav>
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('students') }}">Students</a>
+                <a href="{{ url_for('attendance') }}">Attendance</a>
+                <a href="{{ url_for('logout') }}">Logout</a>
+            </nav>
+        </header>
+
+        <!-- Search and Actions Section -->
+        <div class="page-header">
+            <div class="action-buttons">
+                <button type="button" id="addGradeBtn" class="action-btn add-btn">
+                    <span class="btn-icon">➕</span>
+                    Add Grade
+                </button>
+            </div>
+        </div>
+
+        <h3>📈 Grades Records</h3>
+
+        <!-- Search Bar Integrated with Table -->
+        <div class="table-search-container">
+            <div class="table-search-bar">
+                <form method="GET" id="searchForm" class="inline-search">
+                    <div class="search-input-group">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchQuery" name="q" placeholder="Search by student name, subject, or score..." value="{{ request.args.get('q', '') }}" autocomplete="off">
+                        <button type="submit" class="search-btn">Search</button>
+                        {% if request.args.get('q') %}
+                        <button type="button" onclick="clearSearch()" class="clear-search-btn" title="Clear search">
+                            <span class="clear-icon">🗑️</span>
+                            <span class="clear-text">Clear</span>
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>👨‍🎓 Student Name</th>
+                        <th>📚 Subject</th>
+                        <th>📊 Score</th>
+                        <th>⚡ Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grade in grades %}
+                    <tr>
+                        <td>{{ grade[0] }}</td>
+                        <td>{{ grade[1] }}</td>
+                        <td>{{ grade[2] }}</td>
+                        <td>
+                            <span class="grade-score">{{ "%.2f"|format(grade[3]) }}</span>
+                        </td>
+                        <td>
+                            <div class="table-actions">
+                                <button type="button" class="action-btn edit-btn" onclick="editGrade({{ grade[0] }}, '{{ grade[1] }}', '{{ grade[2] }}', {{ grade[3] }})" title="Edit Grade">
+                                    <span class="btn-icon">✏️</span>
+                                </button>
+                                <button type="button" class="action-btn delete-btn" onclick="deleteGrade({{ grade[0] }}, '{{ grade[1] }}', '{{ grade[2] }}')" title="Delete Grade">
+                                    <span class="btn-icon">🗑️</span>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add Grade Modal -->
+        <div id="addGradeModal" class="modal">
+            <div class="modal-content large-modal">
+                <div class="modal-header">
+                    <h3>➕ Add New Grade</h3>
+                    <span class="modal-close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="addGradeForm">
+                        <input type="hidden" name="add" value="1">
+                        <div class="grades-list-container">
+                            <div class="grades-header">
+                                <h4>👨‍🎓 Students</h4>
+                            </div>
+                            <div class="students-grades-list">
+                                {% for student in students %}
+                                <div class="grade-item">
+                                    <div class="student-name">
+                                        <span>{{ student[1] }}</span>
+                                    </div>
+                                    <div class="grade-inputs">
+                                        <input type="text" name="subject_{{ student[0] }}" placeholder="Subject (e.g., Math, Science)" class="grade-input subject-input">
+                                        <input type="number" step="0.01" min="0" max="100" name="score_{{ student[0] }}" placeholder="Score (0-100)" class="grade-input score-input">
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="action-btn cancel-btn" onclick="closeModal()">
+                                <span class="btn-icon">❌</span>
+                                Cancel
+                            </button>
+                            <button type="submit" class="action-btn save-btn">
+                                <span class="btn-icon">💾</span>
+                                Add Grades
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Grade Modal -->
+        <div id="editGradeModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>✏️ Edit Grade</h3>
+                    <span class="modal-close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form method="POST" id="editGradeForm">
+                        <input type="hidden" name="update" value="1">
+                        <input type="hidden" name="id" id="editGradeId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editStudentName">👨‍🎓 Student:</label>
+                                <input type="text" id="editStudentName" readonly class="readonly-field">
+                            </div>
+                            <div class="form-group">
+                                <label for="editSubject">📚 Subject:</label>
+                                <input type="text" id="editSubject" name="subject" required readonly class="readonly-field">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="editScore">📊 Score:</label>
+                            <input type="number" step="0.01" min="0" max="100" id="editScore" name="score" required>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="action-btn cancel-btn" onclick="closeModal()">
+                                <span class="btn-icon">❌</span>
+                                Cancel
+                            </button>
+                            <button type="submit" class="action-btn save-btn">
+                                <span class="btn-icon">💾</span>
+                                Update Grade
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content small-modal">
+                <div class="modal-header">
+                    <h3>🗑️ Delete Grade Record</h3>
+                    <span class="modal-close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the grade record for <strong id="deleteStudentName"></strong> in <strong id="deleteSubject"></strong>?</p>
+                    <form method="POST" id="deleteForm">
+                        <input type="hidden" name="delete" value="1">
+                        <input type="hidden" name="id" id="deleteId">
+                        <div class="modal-actions">
+                            <button type="button" class="action-btn cancel-btn" onclick="closeModal()">
+                                <span class="btn-icon">❌</span>
+                                Cancel
+                            </button>
+                            <button type="submit" class="action-btn delete-confirm-btn">
+                                <span class="btn-icon">🗑️</span>
+                                Delete
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Modal functionality
+        const addModal = document.getElementById('addGradeModal');
+        const editModal = document.getElementById('editGradeModal');
+        const deleteModal = document.getElementById('deleteModal');
+        const addBtn = document.getElementById('addGradeBtn');
+
+        // Open add grade modal
+        addBtn.addEventListener('click', function() {
+            addModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        });
+
+        // Close modals when clicking X or outside
+        document.querySelectorAll('.modal-close').forEach(closeBtn => {
+            closeBtn.addEventListener('click', closeModal);
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target === addModal || event.target === editModal || event.target === deleteModal) {
+                closeModal();
+            }
+        });
+
+        function closeModal() {
+            addModal.style.display = 'none';
+            editModal.style.display = 'none';
+            deleteModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Edit grade function
+        function editGrade(id, studentName, subject, score) {
+            document.getElementById('editGradeId').value = id;
+            document.getElementById('editStudentName').value = studentName;
+            document.getElementById('editSubject').value = subject;
+            document.getElementById('editScore').value = score;
+            editModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Delete grade function
+        function deleteGrade(id, studentName, subject) {
+            document.getElementById('deleteId').value = id;
+            document.getElementById('deleteStudentName').textContent = studentName;
+            document.getElementById('deleteSubject').textContent = subject;
+            deleteModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Clear search function
+        function clearSearch() {
+            const searchInput = document.getElementById('searchQuery');
+            searchInput.value = '';
+            // Redirect to clear the search
+            window.location.href = '{{ url_for("grades") }}';
+        }
+
+        // Handle Add Grade form submission
+        document.getElementById('addGradeForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Collect all students with both subject and score filled
+            const students = document.querySelectorAll('.grade-item');
+            let hasValidEntry = false;
+            
+            students.forEach(gradeItem => {
+                const studentName = gradeItem.querySelector('.student-name span').textContent;
+                const subjectInput = gradeItem.querySelector('.subject-input');
+                const scoreInput = gradeItem.querySelector('.score-input');
+                
+                if (subjectInput.value.trim() && scoreInput.value.trim()) {
+                    hasValidEntry = true;
+                }
+            });
+
+            if (!hasValidEntry) {
+                alert('Please enter at least subject and score for one student');
+                return;
+            }
+
+            // Submit grades for all students with entries
+            students.forEach(gradeItem => {
+                const subjectInput = gradeItem.querySelector('.subject-input');
+                const scoreInput = gradeItem.querySelector('.score-input');
+                
+                if (subjectInput.value.trim() && scoreInput.value.trim()) {
+                    // Extract student ID from input name attribute
+                    const studentId = subjectInput.name.split('_')[1];
+                    
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.style.display = 'none';
+                    
+                    const addInput = document.createElement('input');
+                    addInput.type = 'hidden';
+                    addInput.name = 'add';
+                    addInput.value = '1';
+                    form.appendChild(addInput);
+                    
+                    const studentIdInput = document.createElement('input');
+                    studentIdInput.type = 'hidden';
+                    studentIdInput.name = 'student_id';
+                    studentIdInput.value = studentId;
+                    form.appendChild(studentIdInput);
+                    
+                    const subjectHiddenInput = document.createElement('input');
+                    subjectHiddenInput.type = 'hidden';
+                    subjectHiddenInput.name = 'subject';
+                    subjectHiddenInput.value = subjectInput.value.trim();
+                    form.appendChild(subjectHiddenInput);
+                    
+                    const scoreHiddenInput = document.createElement('input');
+                    scoreHiddenInput.type = 'hidden';
+                    scoreHiddenInput.name = 'score';
+                    scoreHiddenInput.value = scoreInput.value.trim();
+                    form.appendChild(scoreHiddenInput);
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                    document.body.removeChild(form);
+                }
+            });
+
+            closeModal();
+        });
+
+        // Form submission feedback for edit and delete forms
+        document.getElementById('editGradeForm').addEventListener('submit', function(e) {
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="btn-icon">⏳</span> Processing...';
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 3000);
+            }
+        });
+
+        document.getElementById('deleteForm').addEventListener('submit', function(e) {
+            const btn = this.querySelector('button[type="submit"]');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="btn-icon">⏳</span> Processing...';
+                btn.disabled = true;
+
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
